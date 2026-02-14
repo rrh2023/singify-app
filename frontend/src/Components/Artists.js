@@ -7,7 +7,7 @@ const SpotifyFavs = ({auth}) => {
   useEffect(() => {
     if (auth) {
       async function favFollowingData(){
-        await fetch('http://localhost:3001/getUsersArtists')
+        await fetch('http://localhost:3001/getUsersSubscriptions')
         .then(res => {
           if(res.status === 200){
             return res.json()

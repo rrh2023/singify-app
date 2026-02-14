@@ -66,9 +66,7 @@ const Song = (props) => {
         }
         {isFavorite===false && props.auth && <button onClick={favoriteSong}>Favorite</button>}
         {isFavorite && <span style={{color: "red"}}> &hearts; </span>}
-       
     </div>
-      
     )
 }
 
