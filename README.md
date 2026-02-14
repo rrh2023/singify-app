@@ -1,6 +1,6 @@
 # Singify
 
-A full-stack app where users are able to retrieve lyrics of their favorite songs using the YouTube Music, SongKick, & Lyrics.ovh APIs. 
+A full-stack app where users are able to retrieve lyrics of their favorite songs using the YouTube Music, Bandsintown, & Lyrics.ovh APIs. 
 
 ---
 
@@ -15,7 +15,7 @@ A full-stack app where users are able to retrieve lyrics of their favorite songs
 ## APIs
 
 - [YouTube Music](https://developers.google.com/youtube/v3/guides/auth/server-side-web-apps)
-- [SongKick](https://www.songkick.com/developer/getting-started)
+- [Bandsintown](https://artists.bandsintown.com/)
 - [Lyrics.ovh](https://lyricsovh.docs.apiary.io/#)
 - [Speech Recognition](https://developer.mozilla.org/en-US/docs/Web/API/SpeechRecognition)
 

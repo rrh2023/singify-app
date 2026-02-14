@@ -177,27 +177,51 @@ app.get("/getlyrics/:artist/:songTitle", (req, res) => {
   })
 })
 
-// Songkick API (unchanged)
+// Replace the /artist/:name route:
 app.get('/artist/:name', function(req, res){
-  var options = {
-    url: `https://api.songkick.com/api/3.0/search/artists.json?apikey=${apiKey}&query=${req.params.name}`,
-    json: true
-  }
-  
-  request.get(options, async function(error, response, body) {
-    let artistInfo = await body.resultsPage.results.artist[0]
-    let artistId = artistInfo.id
+    const artistName = encodeURIComponent(req.params.name)
     
-    var options2 = {
-      url: `https://api.songkick.com/api/3.0/artists/${artistId}/calendar.json?apikey=${apiKey}`,
-      json: true
-    }
-    
-    request.get(options2, async function(error, response, body) {
-      let events = await body.resultsPage
-      res.send(events)
+    var options = {
+        url: `https://app.ticketmaster.com/discovery/v2/events.json?keyword=${artistName}&classificationName=music&apikey=${ticketmasterApiKey}`,
+        json: true
+    };
+
+    request.get(options, function(error, response, body) {
+        if (error || !body._embedded || !body._embedded.events) {
+            res.send({resultsPage: {results: {event: []}}})
+            return
+        }
+
+        const events = {
+            resultsPage: {
+                results: {
+                    event: body._embedded.events.map(event => ({
+                        id: event.id,
+                        displayName: event.name,
+                        type: event.type,
+                        uri: event.url,
+                        venue: {
+                            displayName: event._embedded?.venues?.[0]?.name || 'TBA',
+                            lat: event._embedded?.venues?.[0]?.location?.latitude,
+                            lng: event._embedded?.venues?.[0]?.location?.longitude,
+                            metroArea: {
+                                displayName: event._embedded?.venues?.[0]?.city?.name || '',
+                                country: {
+                                    displayName: event._embedded?.venues?.[0]?.country?.name || ''
+                                }
+                            }
+                        },
+                        start: {
+                            date: event.dates?.start?.localDate,
+                            datetime: event.dates?.start?.dateTime
+                        }
+                    }))
+                }
+            }
+        }
+        
+        res.send(events)
     })
-  })
 })
 
 const PORT = 3001
