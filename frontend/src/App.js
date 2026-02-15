@@ -177,61 +177,49 @@ app.get("/getlyrics/:artist/:songTitle", (req, res) => {
   })
 })
 
-// Replace the entire /artist/:name route
+// Replace the /artist/:name route:
 app.get('/artist/:name', function(req, res){
     const artistName = encodeURIComponent(req.params.name)
     
     var options = {
-        url: `https://rest.bandsintown.com/artists/${artistName}/events?app_id=${bandsintownAppId}`,
+        url: `https://app.ticketmaster.com/discovery/v2/events.json?keyword=${artistName}&classificationName=music&apikey=${ticketmasterApiKey}`,
         json: true
     };
 
     request.get(options, function(error, response, body) {
-        if (error) {
-            console.error('Bandsintown API error:', error)
-            res.status(500).send({error: 'Failed to fetch events'})
-            return
-        }
-        
-        if (response.statusCode === 404) {
-            res.send({resultsPage: {results: {event: []}}}) // No events found
+        if (error || !body._embedded || !body._embedded.events) {
+            res.send({resultsPage: {results: {event: []}}})
             return
         }
 
-        // Transform Bandsintown response to match your frontend expectations
         const events = {
             resultsPage: {
                 results: {
-                    event: body.map(event => ({
+                    event: body._embedded.events.map(event => ({
                         id: event.id,
-                        displayName: event.title || `${req.params.name} at ${event.venue.name}`,
+                        displayName: event.name,
                         type: event.type,
                         uri: event.url,
-                        status: event.offers && event.offers.length > 0 ? 'ok' : 'cancelled',
                         venue: {
-                            displayName: event.venue.name,
-                            lat: event.venue.latitude,
-                            lng: event.venue.longitude,
+                            displayName: event._embedded?.venues?.[0]?.name || 'TBA',
+                            lat: event._embedded?.venues?.[0]?.location?.latitude,
+                            lng: event._embedded?.venues?.[0]?.location?.longitude,
                             metroArea: {
-                                displayName: event.venue.city,
+                                displayName: event._embedded?.venues?.[0]?.city?.name || '',
                                 country: {
-                                    displayName: event.venue.country
+                                    displayName: event._embedded?.venues?.[0]?.country?.name || ''
                                 }
                             }
                         },
-                        location: {
-                            city: event.venue.city
-                        },
                         start: {
-                            date: event.datetime,
-                            datetime: event.datetime
+                            date: event.dates?.start?.localDate,
+                            datetime: event.dates?.start?.dateTime
                         }
                     }))
                 }
             }
         }
         
-        console.log('Events:', events.results.event)
         res.send(events)
     })
 })
