@@ -1,10 +1,21 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-const userSchema = {
-    name: String,
-    spotifyId: String
-}
+const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  userId: { 
+    type: String,
+    required: true,
+    unique: true
+  },
+  platform: {
+    type: String,
+    default: 'youtube'
+  }
+}, {
+  timestamps: true
+});
 
-const User = mongoose.model("User", userSchema)
-
-module.exports = User;
+module.exports = mongoose.model('User', userSchema);

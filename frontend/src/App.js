@@ -8,14 +8,14 @@ const favSong = require("./models/favSongModel")
 const { google } = require('googleapis')
 
 // include keys & secrets
-const {youtube_client_id, youtube_client_secret, redirect_uri, mongoPassword, bandsintownAppId} = require("./keys.js")
+const {youtube_client_id, youtube_client_secret, redirect_uri, apiKey, mongoPassword} = require("./keys.js")
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // connect to mongoDB
-const mongoUri = `mongodb+srv://robherndon2023_db_user:${mongoPassword}@cluster0.t4uqbkf.mongodb.net/?appName=Cluster0`
+const mongoUri = `mongodb+srv://rrh2023:${mongoPassword}@cluster0.gkv7t.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
 mongoose.connect(mongoUri)
 
 // YouTube OAuth2 Client
@@ -222,4 +222,10 @@ app.get('/artist/:name', function(req, res){
         
         res.send(events)
     })
+})
+
+const PORT = 3001
+
+app.listen(PORT, () => {
+  console.log(`Express server is running on port ${PORT}`)
 })

@@ -1,11 +1,23 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-const favSongSchema = {
-    artist: String,
-    songTitle: String,
-    user: String
-}
+const favSongSchema = new mongoose.Schema({
+  artist: {
+    type: String,
+    required: true
+  },
+  songTitle: {
+    type: String,
+    required: true
+  },
+  user: { 
+    type: String,
+    required: true
+  },
+  videoId: {
+    type: String
+  }
+}, {
+  timestamps: true
+});
 
-const favSong = mongoose.model("favSong", favSongSchema)
-
-module.exports = favSong;
+module.exports = mongoose.model('FavSong', favSongSchema);
