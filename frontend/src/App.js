@@ -8,7 +8,7 @@ const favSong = require("./models/favSongModel")
 const { google } = require('googleapis')
 
 // include keys & secrets
-const {youtube_client_id, youtube_client_secret, redirect_uri, apiKey, mongoPassword} = require("./keys.js")
+const {youtube_client_id, youtube_client_secret, redirect_uri, mongoPassword, bandsintownAppId} = require("./keys.js")
 
 app.use(cors());
 app.use(express.json());
@@ -177,55 +177,61 @@ app.get("/getlyrics/:artist/:songTitle", (req, res) => {
   })
 })
 
-// Replace the /artist/:name route:
+// Replace the entire /artist/:name route
 app.get('/artist/:name', function(req, res){
     const artistName = encodeURIComponent(req.params.name)
     
     var options = {
-        url: `https://app.ticketmaster.com/discovery/v2/events.json?keyword=${artistName}&classificationName=music&apikey=${ticketmasterApiKey}`,
+        url: `https://rest.bandsintown.com/artists/${artistName}/events?app_id=${bandsintownAppId}`,
         json: true
     };
 
     request.get(options, function(error, response, body) {
-        if (error || !body._embedded || !body._embedded.events) {
-            res.send({resultsPage: {results: {event: []}}})
+        if (error) {
+            console.error('Bandsintown API error:', error)
+            res.status(500).send({error: 'Failed to fetch events'})
+            return
+        }
+        
+        if (response.statusCode === 404) {
+            res.send({resultsPage: {results: {event: []}}}) // No events found
             return
         }
 
+        // Transform Bandsintown response to match your frontend expectations
         const events = {
             resultsPage: {
                 results: {
-                    event: body._embedded.events.map(event => ({
+                    event: body.map(event => ({
                         id: event.id,
-                        displayName: event.name,
+                        displayName: event.title || `${req.params.name} at ${event.venue.name}`,
                         type: event.type,
                         uri: event.url,
+                        status: event.offers && event.offers.length > 0 ? 'ok' : 'cancelled',
                         venue: {
-                            displayName: event._embedded?.venues?.[0]?.name || 'TBA',
-                            lat: event._embedded?.venues?.[0]?.location?.latitude,
-                            lng: event._embedded?.venues?.[0]?.location?.longitude,
+                            displayName: event.venue.name,
+                            lat: event.venue.latitude,
+                            lng: event.venue.longitude,
                             metroArea: {
-                                displayName: event._embedded?.venues?.[0]?.city?.name || '',
+                                displayName: event.venue.city,
                                 country: {
-                                    displayName: event._embedded?.venues?.[0]?.country?.name || ''
+                                    displayName: event.venue.country
                                 }
                             }
                         },
+                        location: {
+                            city: event.venue.city
+                        },
                         start: {
-                            date: event.dates?.start?.localDate,
-                            datetime: event.dates?.start?.dateTime
+                            date: event.datetime,
+                            datetime: event.datetime
                         }
                     }))
                 }
             }
         }
         
+        console.log('Events:', events.results.event)
         res.send(events)
     })
-})
-
-const PORT = 3001
-
-app.listen(PORT, () => {
-  console.log(`Express server is running on port ${PORT}`)
 })
