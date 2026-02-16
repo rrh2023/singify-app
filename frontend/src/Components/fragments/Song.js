@@ -64,7 +64,7 @@ const Song = (props) => {
             <span>{lyrics.text}</span>
         </div>
         }
-        {isFavorite===false && props.auth && <button onClick={favoriteSong}>Favorite</button>}
+        {!isFavorite && props.auth && <button onClick={favoriteSong}>Favorite</button>}
         {isFavorite && <span style={{color: "red"}}> &hearts; </span>}
     </div>
     )

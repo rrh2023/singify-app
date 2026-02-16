@@ -1,226 +1,295 @@
-const express = require('express')
-const app = express()
-const cors = require('cors')
-const request = require('request')
-const mongoose = require('mongoose')
-const User = require("./models/userModel")
-const favSong = require("./models/favSongModel")
+const express = require('express');
+const app = express();
+const cors = require('cors');
+const request = require('request');
+const mongoose = require('mongoose');
+const User = require("./models/userModel");
+const favSong = require("./models/favSongModel");
+const { google } = require('googleapis');
 
-// include keys & secrets
-const {client_id, client_secret, redirect_uri, apiKey, mongoPassword} = require("./keys.js")
+// Include keys & secrets
+const { youtube_client_id, youtube_client_secret, redirect_uri, ticketmasterApiKey, mongoPassword } = require("./keys.js");
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// connect to mongoDB (database)
-const mongoUri = `mongodb+srv://rrh2023:${mongoPassword}@cluster0.gkv7t.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
-mongoose.connect(mongoUri)
+// Connect to MongoDB
+const mongoUri = `mongodb+srv://robherndon2023_db_user:${mongoPassword}@cluster0.t4uqbkf.mongodb.net/?appName=Cluster0`;
+mongoose.connect(mongoUri);
 
-let token = "" // access_token
-let curSpotifyUser = {} // cur user
-let usersArtists = {}
+// YouTube OAuth2 Client
+const oauth2Client = new google.auth.OAuth2(
+  youtube_client_id,
+  youtube_client_secret,
+  redirect_uri
+);
 
-// Spotify API Calls
+let curYouTubeUser = {};
+let usersSubscriptions = {};
+
+// ============= AUTHENTICATION ROUTES =============
+
 app.get('/login', function(req, res) {
-   const params = {
-    response_type: 'code',
-    client_id,
-    scope: 'user-follow-read',
-    redirect_uri: "http://localhost:3001/callback"
+  const scopes = [
+    'https://www.googleapis.com/auth/youtube.readonly',
+    'https://www.googleapis.com/auth/userinfo.profile'
+  ];
+  
+  const url = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: scopes
+  });
+  
+  res.redirect(url);
+});
+
+app.get('/callback', async function(req, res) {
+  const code = req.query.code;
+  
+  try {
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+    console.log("Logged in from server, access token retrieved");
+    
+    const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+    const userInfo = await oauth2.userinfo.get();
+    curYouTubeUser = userInfo.data;
+    console.log("Current user's YouTube profile info retrieved");
+    
+    const existingUser = await User.findOne({ userId: curYouTubeUser.id });
+    if (existingUser) {
+      console.log("User already registered in db");
+    } else {
+      const newUser = new User({
+        name: curYouTubeUser.name,
+        userId: curYouTubeUser.id,
+        platform: 'youtube'
+      });
+      await newUser.save();
+      console.log('New user added to db');
+    }
+    
+    const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
+    const subscriptions = await youtube.subscriptions.list({
+      part: 'snippet',
+      mine: true,
+      maxResults: 50
+    });
+    
+    usersSubscriptions = subscriptions.data;
+    console.log('User subscriptions retrieved');
+    
+    res.redirect('http://localhost:3000/');
+    
+  } catch (error) {
+    console.error('Error during authentication:', error);
+    res.redirect('http://localhost:3000/?error=auth_failed');
   }
-  const qs = new URLSearchParams(params)
-  url = 'https://accounts.spotify.com/authorize?' + qs.toString()
-  res.redirect(url)
-})
+});
 
-app.get('/callback', function(req, res) {
-   let code = req.query.code || null
-   let authOptions = {
-     url: 'https://accounts.spotify.com/api/token',
-     form: {
-       code: code,
-       redirect_uri,
-       grant_type: 'authorization_code'
-     },
-     headers: {
-       'Authorization': 'Basic ' + (Buffer.from(
-         client_id + ':' + client_secret
-       ).toString('base64'))
-     },
-     json: true
-   }
+app.get('/logout', function(req, res) {
+  oauth2Client.setCredentials({});
+  curYouTubeUser = {};
+  usersSubscriptions = {};
+  console.log("Logged out from server");
+  res.send({ success: true });
+});
 
-   
-    request.post(authOptions, function(error, response, body) {
-        token = body.access_token
-        console.log("logged in from server, access token retrieved");
+app.get('/checkAuth', function(req, res) {
+  const credentials = oauth2Client.credentials;
+  if (credentials && credentials.access_token) {
+    res.send({ auth: true, user: curYouTubeUser });
+  } else {
+    res.send({ auth: false });
+  }
+});
 
-        var options = {
-            url: 'https://api.spotify.com/v1/me',
-            headers: { 'Authorization': 'Bearer ' + token },
-            json: true
-        };
+// ============= USER DATA ROUTES =============
+
+app.get('/getUserInfo', function(req, res) {
+  if (curYouTubeUser && curYouTubeUser.id) {
+    res.send({ user: curYouTubeUser });
+  } else {
+    res.status(401).send({ error: 'Not authenticated' });
+  }
+});
+
+app.get('/getUsersSubscriptions', function(req, res) {
+  console.log('Getting user subscriptions');
+  res.send(usersSubscriptions);
+});
+
+// ============= FAVORITES ROUTES =============
+
+app.get('/checkIfFavorite/:artist/:songTitle', async function(req, res) {
+  try {
+    const check = await favSong.findOne({ 
+      artist: req.params.artist, 
+      songTitle: req.params.songTitle, 
+      user: curYouTubeUser.id
+    });
     
-        request.get(options, function(error, response, body) {
-            curSpotifyUser = body
-            console.log("current user's spotify profile info retrieved");
-            User.findOne({ spotifyId: curSpotifyUser.id }).exec()
-            .then(res => {
-                if( res !== null){
-                    console.log("User already registered in db")
-                }else{
-                    const newUser = new User({
-                        name: curSpotifyUser.display_name,
-                        spotifyId: curSpotifyUser.id
-                    })
-                    newUser.save(); 
-                    console.log('new user in db')
-                }
-            })
-        });
-
-        var options2 = {
-            url: 'https://api.spotify.com/v1/me/following?type=artist&limit=15',
-            headers: { 'Authorization': 'Bearer ' + token },
-            json: true
-        };
-    
-        request.get(options2, function(error, response, body) {
-            usersArtists = body;
-            console.log('usersArtists',body)
-            console.log("current user's spotify artists info retrieved");
-        });
-
-
-    })
-   
-    res.redirect('http://localhost:3000/')
-
-  } 
-)
-
-app.get('/logout', function(req, res){
-    token = ""
-    curSpotifyUser = {}
-    usersArtists = {}
-    console.log("logged out from server")
-})
-
-app.get('/checkAuth', function(req, res){
-    if(token){
-        res.send({auth: true})
-    }else{
-        res.send({auth: false})
+    if (check) {
+      console.log("User saved song");
+      res.send({ favorited: true, songId: check._id });
+    } else {
+      console.log("User did not save song");
+      res.send({ favorited: false });
     }
-})
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
 
-app.get('/checkIfFavorite/:artist/:songTitle', async function(req, res){
-    const check = await favSong.findOne({ artist: req.params.artist, songTitle: req.params.songTitle, user: curSpotifyUser.id}).exec()
-    console.log("result:", check)
-    if(check){
-        console.log("user saved song")
-        res.send({favorited: true})
-    }else{
-        console.log("user did not save song")
-        res.send({favorited: false})
-    }
-    
-})
-
-app.post('/favorite/:artist/:songTitle',  function(req, res){
+app.post('/favorite/:artist/:songTitle', async function(req, res) {
+  try {
     const newFavSong = new favSong({
-        artist: req.params.artist,
-        songTitle: req.params.songTitle,
-        user: curSpotifyUser.id
-    })
-    newFavSong.save(); 
-    console.log("new favorited song in db")
-})
+      artist: req.params.artist,
+      songTitle: req.params.songTitle,
+      user: curYouTubeUser.id,
+      videoId: req.body.videoId || null
+    });
+    await newFavSong.save();
+    console.log("New favorited song in db");
+    res.send({ success: true, song: newFavSong });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
 
-app.get('/favsongs', async function(req, res){
-    const songs = await favSong.find({user: curSpotifyUser.id}).exec()
-    console.log(songs)
-    res.send({songs})
-})
+app.get('/favsongs', async function(req, res) {
+  try {
+    const songs = await favSong.find({ user: curYouTubeUser.id }).sort({ createdAt: -1 });
+    console.log(`Found ${songs.length} favorite songs`);
+    res.send({ songs });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
 
-app.get('/getUsersArtists', function(req, res){
-    console.log('getting user artists')
-    console.log("MY FOLLOWED ARTISTS", usersArtists)
-    res.send(usersArtists)
-})
+app.delete('/delete/:id', async function(req, res) {
+  try {
+    await favSong.findByIdAndDelete(req.params.id);
+    console.log('Deleted a song');
+    res.send({ success: true });
+  } catch (error) {
+    res.status(500).send({ error: error.message });
+  }
+});
 
+// ============= LYRICS API ROUTES =============
 
-app.get("/delete/:id", async function(req, res){
-    const id = req.params.id
-    await favSong.findByIdAndDelete(id)
-    console.log('deleted a song')
-})
-
-// Lyrics.vho API calls
 app.get("/lyricssearch/:searchterm", (req, res) => {
-    console.log('working')
-    let searchTerm = req.params.searchterm
-    
-
-    request(`https://api.lyrics.ovh/suggest/${searchTerm}`, function (error, response, body) {
-        if (!error && response.statusCode == 200) {
-            res.send(body)
-            // send search results
-        }else{
-            res.send(error)
-            // send error
-        }
-        })
-})
+  const searchTerm = req.params.searchterm;
+  
+  request(`https://api.lyrics.ovh/suggest/${searchTerm}`, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      res.send(body);
+    } else {
+      res.status(500).send({ error: error || 'Search failed' });
+    }
+  });
+});
 
 app.get("/getlyrics/:artist/:songTitle", (req, res) => {
-    let {artist, songTitle} = req.params
+  const { artist, songTitle } = req.params;
+  
+  request.get(`https://api.lyrics.ovh/v1/${artist}/${songTitle}`, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      res.send(body);
+    } else {
+      res.status(500).send({ error: error || 'Lyrics not found' });
+    }
+  });
+});
 
-    request.get(`https://api.lyrics.ovh/v1/${artist}/${songTitle}`, function (error, response, body) {
-        if (!error && response.statusCode == 200) {
-            res.send(body)
-        }else{
-            res.send(error)
-            // send error
-        }
-    })
-})
+// ============= TICKETMASTER API ROUTES =============
 
-app.get('/artist/:name', function(req, res){
-    let artistId
-    var options = {
-        url: `https://api.songkick.com/api/3.0/search/artists.json?apikey=${apiKey}&query=${req.params.name}`,
-        json: true
-    };
-
-    request.get(options, async function(error, response, body) {
-        let artistInfo = await body.resultsPage.results.artist[0]
-        artistId = artistInfo.id
-        console.log('ARTIST ID:', artistId)
-
-        var options2 = {
-            url: `https://api.songkick.com/api/3.0/artists/${artistId}/calendar.json?apikey=${apiKey}`,
-            json: true
-        };
+// Search for artist events
+app.get('/artist/:name/events', async function(req, res) {
+  const artistName = req.params.name;
+  
+  try {
+    const response = await fetch(
+      `https://app.ticketmaster.com/discovery/v2/events.json?keyword=${encodeURIComponent(artistName)}&classificationName=music&apikey=${ticketmaster_api_key}`
+    );
     
-        request.get(options2, async function(error, response, body) {
-            let events = await body.resultsPage//.results.event
-            console.log(events.results.event)
-            res.send(events)
-        });
-
+    if (!response.ok) {
+      throw new Error('Failed to fetch events from Ticketmaster');
+    }
+    
+    const data = await response.json();
+    
+    res.send({
+      artist: artistName,
+      events: data._embedded?.events || [],
+      page: data.page,
+      totalEvents: data.page?.totalElements || 0
     });
+  } catch (error) {
+    console.error('Error fetching artist events:', error);
+    res.status(500).send({ error: error.message });
+  }
+});
 
+// Get specific event details
+app.get('/event/:eventId', async function(req, res) {
+  try {
+    const response = await fetch(
+      `https://app.ticketmaster.com/discovery/v2/events/${req.params.eventId}.json?apikey=${ticketmaster_api_key}`
+    );
     
+    if (!response.ok) {
+      throw new Error('Failed to fetch event details');
+    }
     
+    const data = await response.json();
+    res.send(data);
+  } catch (error) {
+    console.error('Error fetching event details:', error);
+    res.status(500).send({ error: error.message });
+  }
+});
 
-})
+// Advanced event search
+app.get('/events/search', async function(req, res) {
+  const { artist, city, stateCode, countryCode, radius, startDate, endDate } = req.query;
+  
+  try {
+    let url = `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${ticketmaster_api_key}&classificationName=music`;
+    
+    if (artist) url += `&keyword=${encodeURIComponent(artist)}`;
+    if (city) url += `&city=${encodeURIComponent(city)}`;
+    if (stateCode) url += `&stateCode=${stateCode}`;
+    if (countryCode) url += `&countryCode=${countryCode}`;
+    if (radius) url += `&radius=${radius}`;
+    if (startDate) url += `&startDateTime=${startDate}`;
+    if (endDate) url += `&endDateTime=${endDate}`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error('Failed to search events');
+    }
+    
+    const data = await response.json();
+    
+    res.send({
+      events: data._embedded?.events || [],
+      page: data.page,
+      totalEvents: data.page?.totalElements || 0
+    });
+  } catch (error) {
+    console.error('Error searching events:', error);
+    res.status(500).send({ error: error.message });
+  }
+});
 
-
+// ============= START SERVER =============
 
 const PORT = 3001;
 
 app.listen(PORT, () => {
-    console.log(`Express server is running on port ${PORT}`)
-})
+  console.log(`Express server is running on port ${PORT}`);
+});

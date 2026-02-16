@@ -4,8 +4,6 @@ import axios from 'axios'
 
 const Songs = ({start, songs, auth}) => {
   
-
-
   return (
     <div className='search_result'>
       

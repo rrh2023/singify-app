@@ -9,8 +9,6 @@ mic.continuous = true
 mic.interimResults = true
 mic.lang = 'en-US'
 
-
-
 const Events = ({auth}) => {
   const [isListening, setIsListening] = useState(false)
   const [speech, setSpeech] = useState({
