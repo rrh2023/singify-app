@@ -9,10 +9,6 @@ import Unauthorized from './Components/Unauthorized';
 import NotFound from './Components/NotFound';
 import {Link} from "react-router-dom";
 
-
-
-
-
 function App() {
   const [auth, setAuth] = useState(false)
 

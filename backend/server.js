@@ -7,22 +7,33 @@ const User = require("./models/userModel");
 const favSong = require("./models/favSongModel");
 const { google } = require('googleapis');
 
-// Include keys & secrets
-const { youtube_client_id, youtube_client_secret, redirect_uri, ticketmasterApiKey, mongoPassword } = require("./keys.js");
+const {
+  YOUTUBECLIENTID,
+  YOUTUBECLIENTSECRET,
+  REDIRECTURI,
+  TICKETMASTERAPIKEY,
+  MONGOURI
+} = process.env;
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Connect to MongoDB
-const mongoUri = `mongodb+srv://robherndon2023_db_user:${mongoPassword}@cluster0.t4uqbkf.mongodb.net/?appName=Cluster0`;
-mongoose.connect(mongoUri);
+let isConnected = false;
+
+async function connectDB() {
+  if (isConnected) return;
+
+  const db = await mongoose.connect(MONGOURI);
+  isConnected = db.connections[0].readyState;
+}
 
 // YouTube OAuth2 Client
 const oauth2Client = new google.auth.OAuth2(
-  youtube_client_id,
-  youtube_client_secret,
-  redirect_uri
+  YOUTUBECLIENTID,
+  YOUTUBECLIENTSECRET,
+  REDIRECTURI
 );
 
 let curYouTubeUser = {};
@@ -88,6 +99,11 @@ app.get('/callback', async function(req, res) {
   }
 });
 
+app.get("/health", (req, res) => {
+  res.send("Singify API is running 🚀");
+});
+
+
 app.get('/logout', function(req, res) {
   oauth2Client.setCredentials({});
   curYouTubeUser = {};
@@ -123,6 +139,7 @@ app.get('/getUsersSubscriptions', function(req, res) {
 // ============= FAVORITES ROUTES =============
 
 app.get('/checkIfFavorite/:artist/:songTitle', async function(req, res) {
+  await connectDB();
   try {
     const check = await favSong.findOne({ 
       artist: req.params.artist, 
@@ -159,6 +176,7 @@ app.post('/favorite/:artist/:songTitle', async function(req, res) {
 });
 
 app.get('/favsongs', async function(req, res) {
+  await connectDB();
   try {
     const songs = await favSong.find({ user: curYouTubeUser.id }).sort({ createdAt: -1 });
     console.log(`Found ${songs.length} favorite songs`);
@@ -169,6 +187,7 @@ app.get('/favsongs', async function(req, res) {
 });
 
 app.delete('/delete/:id', async function(req, res) {
+  await connectDB();
   try {
     await favSong.findByIdAndDelete(req.params.id);
     console.log('Deleted a song');
@@ -212,7 +231,7 @@ app.get('/artist/:name/events', async function(req, res) {
   
   try {
     const response = await fetch(
-      `https://app.ticketmaster.com/discovery/v2/events.json?keyword=${encodeURIComponent(artistName)}&classificationName=music&apikey=${ticketmaster_api_key}`
+      `https://app.ticketmaster.com/discovery/v2/events.json?keyword=${encodeURIComponent(artistName)}&classificationName=music&apikey=${TICKETMASTERAPIKEY}`
     );
     
     if (!response.ok) {
@@ -237,7 +256,7 @@ app.get('/artist/:name/events', async function(req, res) {
 app.get('/event/:eventId', async function(req, res) {
   try {
     const response = await fetch(
-      `https://app.ticketmaster.com/discovery/v2/events/${req.params.eventId}.json?apikey=${ticketmaster_api_key}`
+      `https://app.ticketmaster.com/discovery/v2/events/${req.params.eventId}.json?apikey=${TICKETMASTERAPIKEY}`
     );
     
     if (!response.ok) {
@@ -257,7 +276,7 @@ app.get('/events/search', async function(req, res) {
   const { artist, city, stateCode, countryCode, radius, startDate, endDate } = req.query;
   
   try {
-    let url = `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${ticketmaster_api_key}&classificationName=music`;
+    let url = `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${TICKETMASTERAPIKEY}&classificationName=music`;
     
     if (artist) url += `&keyword=${encodeURIComponent(artist)}`;
     if (city) url += `&city=${encodeURIComponent(city)}`;
@@ -286,10 +305,4 @@ app.get('/events/search', async function(req, res) {
   }
 });
 
-// ============= START SERVER =============
-
-const PORT = 3001;
-
-app.listen(PORT, () => {
-  console.log(`Express server is running on port ${PORT}`);
-});
+module.exports = app
