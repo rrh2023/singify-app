@@ -3,8 +3,7 @@ import EventPage from './EventPage'
 
 const ArtistPage = ({artist}) => {
 
-  const API_URL = "https://singify-app.vercel.app"
-
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
     const [events, setEvents] = useState([])
     const [show, setShow] = useState(false)

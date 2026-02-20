@@ -2,8 +2,7 @@ import axios from 'axios'
 import React, {useState, useEffect} from 'react'
 
 const Song = (props) => {
-  const API_URL = "https://singify-app.vercel.app"
-
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
     const [showLyrics, setShowLyrics]= useState(false)
     const [lyrics, setLyrics]  = useState({
         text: ''
@@ -16,7 +15,6 @@ const Song = (props) => {
                 return res.json()
             }
             }).then(res => {
-                console.log(res)
                 setIsFavorite(res.favorited)  
             })
             .catch(err => console.log(err))
