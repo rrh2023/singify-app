@@ -27,9 +27,6 @@ function App() {
     window.location='/'
   }
 
-
-
-
   return (
     <div className="App">
       <nav className="navbar">
