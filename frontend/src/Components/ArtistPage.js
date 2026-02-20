@@ -3,11 +3,14 @@ import EventPage from './EventPage'
 
 const ArtistPage = ({artist}) => {
 
+    const API_URL = process.env.API_URL || 'http://localhost:5000';
+
+
     const [events, setEvents] = useState([])
     const [show, setShow] = useState(false)
 
 const getEvents = async (artist_name) => {
-    await fetch(`http://localhost:3001/artist/${artist_name}`,{
+    await fetch(`${API_URL}/artist/${artist_name}`,{
         headers : { 
         'Content-Type': 'application/json',
         'Accept': 'application/json'

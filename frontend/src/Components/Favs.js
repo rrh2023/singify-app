@@ -3,6 +3,10 @@ import React, {useState, useEffect} from 'react'
 import  { Route, Navigate } from 'react-router-dom' 
 
 const Favs = ({auth}) => {
+
+  const API_URL = process.env.API_URL || 'http://localhost:5000';
+
+
   const [songs, setSongs] = useState([])
   useEffect(() => {
     console.log(
@@ -10,7 +14,7 @@ const Favs = ({auth}) => {
     )
     if(auth){
       async function favSongData(){
-        await fetch('http://localhost:3001/favsongs')
+        await fetch(`${API_URL}/favsongs`)
         .then(res => {
           if(res.status === 200){
             return res.json()
@@ -28,7 +32,7 @@ const Favs = ({auth}) => {
   }, [])
 
   const deleteSong = (id) => {
-    axios.get(`http://localhost:3001/delete/${id}`)
+    axios.get(`${API_URL}/delete/${id}`)
     console.log(songs)
     setSongs(songs.filter(song => song._id !== id))
   }

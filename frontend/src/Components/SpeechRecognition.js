@@ -10,6 +10,9 @@ mic.interimResults = true
 mic.lang = 'en-US'
 
 const Events = ({auth}) => {
+
+  const API_URL = process.env.API_URL || 'http://localhost:5000';
+
   const [isListening, setIsListening] = useState(false)
   const [speech, setSpeech] = useState({
     text: ''
@@ -76,7 +79,7 @@ const Events = ({auth}) => {
   }
 
   const search = () => {
-    fetch(`http://localhost:3001/lyricssearch/${speech.text}`).then(res => {
+    fetch(`${API_URL}/lyricssearch/${speech.text}`).then(res => {
         if(res.ok){
           return res.json()
         }

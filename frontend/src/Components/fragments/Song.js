@@ -2,6 +2,8 @@ import axios from 'axios'
 import React, {useState, useEffect} from 'react'
 
 const Song = (props) => {
+    const API_URL = process.env.API_URL || 'http://localhost:5000';
+
     const [showLyrics, setShowLyrics]= useState(false)
     const [lyrics, setLyrics]  = useState({
         text: ''
@@ -9,7 +11,7 @@ const Song = (props) => {
     const [isFavorite, setIsFavorite] = useState(false)
 
     useEffect( () => {
-        fetch(`http://localhost:3001/checkIfFavorite/${props.artist}/${props.songTitle}`).then(res => {
+        fetch(`${API_URL}/checkIfFavorite/${props.artist}/${props.songTitle}`).then(res => {
             if(res.ok){
                 return res.json()
             }
@@ -24,7 +26,7 @@ const Song = (props) => {
 
     async function getLyrics(artist, songTitle) {
 
-        await fetch(`http://localhost:3001/getlyrics/${artist}/${songTitle}`).then(res => {
+        await fetch(`${API_URL}/getlyrics/${artist}/${songTitle}`).then(res => {
             if(res.ok){
               return res.json()
             }
@@ -40,7 +42,7 @@ const Song = (props) => {
     }
 
     async function favoriteSong(){
-        axios.post(`http://localhost:3001/favorite/${props.artist}/${props.songTitle}`)
+        axios.post(`${API_URL}/favorite/${props.artist}/${props.songTitle}`)
         setIsFavorite(true)
     }
 

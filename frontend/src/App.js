@@ -10,17 +10,19 @@ import NotFound from './Components/NotFound';
 import {Link} from "react-router-dom";
 
 function App() {
+  const API_URL = process.env.API_URL || 'http://localhost:5000';
+
   const [auth, setAuth] = useState(false)
 
   useEffect(() => {
-    axios.get('http://localhost:3001/checkAuth')
+    axios.get(`${API_URL}/checkAuth`)
     .then(res => {
       setAuth(res.data.auth)
       console.log('User is logged in?:', res.data.auth)})
   }, [])
 
   const logout = () => { // get rid of tokens
-    axios.get("http://localhost:3001/logout")
+    axios.get(`${API_URL}/logout`)
     .then(res => setAuth(false))
     window.location='/'
   }
@@ -38,7 +40,7 @@ function App() {
         {
           !auth ?
           <div>
-              <a style={{textDecoration:'none'}} href="http://localhost:3001/login">Login</a>
+              <a style={{textDecoration:'none'}} href={`${API_URL}/login`}>Login</a>
           </div>
       :
         <>

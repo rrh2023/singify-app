@@ -2,12 +2,15 @@ import React, {useEffect, useState} from 'react'
 import ArtistPage from './ArtistPage'
 
 const SpotifyFavs = ({auth}) => {
+
+  const API_URL = process.env.API_URL || 'http://localhost:5000';
+
   const [artists, setArtists] = useState([])
 
   useEffect(() => {
     if (auth) {
       async function favFollowingData(){
-        await fetch('http://localhost:3001/getUsersSubscriptions')
+        await fetch(`${API_URL}/getUsersSubscriptions`)
         .then(res => {
           if(res.status === 200){
             return res.json()
