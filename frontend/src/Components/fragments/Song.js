@@ -2,7 +2,7 @@ import axios from 'axios'
 import React, {useState, useEffect} from 'react'
 
 const Song = (props) => {
-  const API_URL = process.env.API_URL
+  const API_URL = "https://singify-app.vercel.app"
 
     const [showLyrics, setShowLyrics]= useState(false)
     const [lyrics, setLyrics]  = useState({

@@ -3,7 +3,7 @@ import EventPage from './EventPage'
 
 const ArtistPage = ({artist}) => {
 
-  const API_URL = process.env.API_URL
+  const API_URL = "https://singify-app.vercel.app"
 
 
     const [events, setEvents] = useState([])

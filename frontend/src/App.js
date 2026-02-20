@@ -10,7 +10,7 @@ import NotFound from './Components/NotFound';
 import {Link} from "react-router-dom";
 
 function App() {
-  const API_URL = process.env.API_URL
+  const API_URL = "https://singify-app.vercel.app"
 
   const [auth, setAuth] = useState(false)
 

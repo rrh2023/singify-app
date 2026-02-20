@@ -11,7 +11,7 @@ mic.lang = 'en-US'
 
 const Events = ({auth}) => {
 
-  const API_URL = process.env.API_URL
+  const API_URL = "https://singify-app.vercel.app"
 
   const [isListening, setIsListening] = useState(false)
   const [speech, setSpeech] = useState({

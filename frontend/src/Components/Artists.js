@@ -3,7 +3,7 @@ import ArtistPage from './ArtistPage'
 
 const SpotifyFavs = ({auth}) => {
 
-  const API_URL = process.env.API_URL
+  const API_URL = "https://singify-app.vercel.app"
 
   const [artists, setArtists] = useState([])
 
