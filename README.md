@@ -1,6 +1,8 @@
 # Singify
 
-A full-stack app where users are able to retrieve lyrics of their favorite songs using the YouTube Music, TicketMaster, & Lyrics.ovh APIs. 
+A full-stack app where users are able to retrieve lyrics of their favorite songs using the YouTube Music, TicketMaster, & Lyrics.ovh APIs.
+
+https://singify-app.vercel.app/
 
 ---
 
