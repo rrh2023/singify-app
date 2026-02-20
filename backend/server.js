@@ -7,6 +7,8 @@ const User = require("./models/userModel");
 const favSong = require("./models/favSongModel");
 const { google } = require('googleapis');
 
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
 const {
   YOUTUBECLIENTID,
   YOUTUBECLIENTSECRET,
@@ -91,11 +93,11 @@ app.get('/callback', async function(req, res) {
     usersSubscriptions = subscriptions.data;
     console.log('User subscriptions retrieved');
     
-    res.redirect('http://localhost:3000/');
+    res.redirect(`${FRONTEND_URL}/`);
     
   } catch (error) {
     console.error('Error during authentication:', error);
-    res.redirect('http://localhost:3000/?error=auth_failed');
+    res.redirect(`${FRONTEND_URL}/?error=auth_failed`);
   }
 });
 
