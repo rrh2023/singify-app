@@ -3,6 +3,8 @@ import React, {useState, useEffect} from 'react'
 
 const Song = (props) => {
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+
     const [showLyrics, setShowLyrics]= useState(false)
     const [lyrics, setLyrics]  = useState({
         text: ''
