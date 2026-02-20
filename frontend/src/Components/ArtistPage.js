@@ -3,7 +3,7 @@ import EventPage from './EventPage'
 
 const ArtistPage = ({artist}) => {
 
-    const API_URL = process.env.API_URL || 'http://localhost:5000';
+  const API_URL = process.env.API_URL
 
 
     const [events, setEvents] = useState([])

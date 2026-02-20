@@ -4,7 +4,7 @@ import  { Route, Navigate } from 'react-router-dom'
 
 const Favs = ({auth}) => {
 
-  const API_URL = process.env.API_URL || 'http://localhost:5000';
+  const API_URL = process.env.API_URL
 
 
   const [songs, setSongs] = useState([])
